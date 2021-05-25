@@ -37,7 +37,36 @@ struct Entity{
 struct World {
     tiles: Vec<Tile>,
     entities: Vec<Entity>,
+    player:Entity,
+    camera:Camera2D,
     time: i32,
+}
+
+impl World{
+    fn is_tile_at(&self, x:i32, y:i32, ) -> bool{
+        for tile in &self.tiles{
+            if tile.x == x && tile.y == y{
+                return true;
+            }
+        }
+        false
+    }
+    fn get_tile_at(&self, x:i32, y:i32) -> Tile {
+        for tile in &self.tiles{
+            if tile.x == x && tile.y == y{
+                return Tile{
+                    x,
+                    y,
+                    t: tile.t
+                }
+            }
+        }
+        Tile{
+            x,
+            y,
+            t: 0
+        }
+    }
 }
 
 
@@ -52,12 +81,29 @@ async fn main() {
     let spr_water = include_str!("asset/water.spr.txt");
     let spr_log = include_str!("asset/log.spr.txt");
     let spr_leaf = include_str!("asset/leaf.spr.txt");
-
+    let spr_player = include_str!("asset/player.spr.txt");
+    //=== camera & world setup
+    let mut cam_zoom = vec2(0.0019,-(screen_width() / screen_height())*0.002665);
     let mut level = World {
         tiles: vec![],
         entities: vec![],
+        player: Entity {
+            pos: vec2(10.0, 10.0),
+            t: 0,
+            data: "".to_string()
+        },
+        camera: Camera2D{
+            zoom: vec2(0.0019, -(screen_width() / screen_height())*0.002665),
+            target : Vec2::new(2672., 264.),
+            rotation : 0.,
+            ..Default::default()
+        },
         time: 0,
     };
+
+    level.camera.zoom.y = -level.camera.zoom.y;
+
+    //=== Worldgen
     let mut noise_offset = rand::gen_range(0.0, 20.0);
     for x in 0..100{
         let mut noise = get_linear_noise(noise_offset);
@@ -82,8 +128,7 @@ async fn main() {
                 t:1,
             });
         }
-        //Features: Treess
-        //Debug note: use Tile ID 2 for now until Wood/Leaves are added
+        //Features: Trees
         if rand::gen_range(0, 10) > 8{
             let tree_trunk_height = rand::gen_range(3,5);
             for i in noise as i32  - tree_trunk_height.. noise as i32 {
@@ -110,19 +155,39 @@ async fn main() {
                 t:3,
             });
         }
+        //Features: Ponds
+        //TODO:Ponds
+
     }
+
+
 
 
     loop {
 
         //==== Process Input
 
+        if is_key_down(KeyCode::W){
+            level.player.pos.y -= 0.1;
+        }
+        if is_key_down(KeyCode::A){
+            level.player.pos.x -= 0.1;
+        }
+        if is_key_down(KeyCode::S){
+            level.player.pos.y += 0.1;
+        }
+        if is_key_down(KeyCode::D){
+            level.player.pos.x += 0.1;
+        }
 
         //==== Game logic & other chores
 
 
         //==== Handle Rendering
         clear_background(WHITE);
+        cam_zoom.y = -(screen_width() / screen_height())*0.001865;
+        set_camera(&level.camera);
+        level.camera.zoom = cam_zoom;
         /* Terrain */
         for tile in &level.tiles {
             match tile.t {
@@ -135,9 +200,12 @@ async fn main() {
                 //if we screw up, log it.
                 _ => println!("[Render] [Error] Encountered tile ID {}, which has no corresponding branch in the match statement.", tile.t),
             }
-            draw_text(&*format!("{}", tile.t), tile.x as f32 *TILE_SIZE*1.5, tile.y as f32*TILE_SIZE*1.5, 20.0, BLACK);
+            draw_text(&*format!("{}/{}/{}", tile.x, tile.y, tile.t), tile.x as f32 *TILE_SIZE*1.5, tile.y as f32*TILE_SIZE*1.5, 20.0, BLACK);
         }
         /* Entities */
+        //player
+        draw_spr(spr_water, level.player.pos.x as i32, level.player.pos.x as i32, 10.0);
+        //world entities
         for entity in &level.entities{
             match entity.t{
                 //0 -> Player
@@ -146,7 +214,16 @@ async fn main() {
                 _ => println!("[Render] [Error] Encountered entity render ID {}, which has no corresponding branch in the match statement", entity.t)
             }
         }
+        set_default_camera();
+        draw_text(&*format!("Px/Py: {} | FPS: {}", &level.player.pos, get_fps()), 10.0, 10.0, 20.0, BLACK);
+        //some test mouse code!
 
+      //  if level.is_tile_at(mouse_position().0 as i32, mouse_position().1 as i32){
+      //      draw_text(&*format!("hovering over tile of type {}", level.get_tile_at(mouse_position().0 as i32, mouse_position().1 as i32).t), mouse_position().0, mouse_position().1, 10.0, BLACK);
+      //  }
+      //  else{
+      //      draw_text(&*format!("no tile hovered. {:?}", mouse_position()), mouse_position().0, mouse_position().1, 10.0, BLACK);
+      //  }
 
         /* UI & Debug */
 
