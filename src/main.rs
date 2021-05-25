@@ -38,7 +38,6 @@ struct World {
     tiles: Vec<Tile>,
     entities: Vec<Entity>,
     player:Entity,
-    camera:Camera2D,
     time: i32,
 }
 
@@ -83,25 +82,17 @@ async fn main() {
     let spr_leaf = include_str!("asset/leaf.spr.txt");
     let spr_player = include_str!("asset/player.spr.txt");
     //=== camera & world setup
-    let mut cam_zoom = vec2(0.0019,-(screen_width() / screen_height())*0.002665);
     let mut level = World {
         tiles: vec![],
         entities: vec![],
         player: Entity {
-            pos: vec2(10.0, 10.0),
+            pos: vec2(20.0, 20.0),
             t: 0,
             data: "".to_string()
-        },
-        camera: Camera2D{
-            zoom: vec2(0.0019, -(screen_width() / screen_height())*0.002665),
-            target : Vec2::new(2672., 264.),
-            rotation : 0.,
-            ..Default::default()
         },
         time: 0,
     };
 
-    level.camera.zoom.y = -level.camera.zoom.y;
 
     //=== Worldgen
     let mut noise_offset = rand::gen_range(0.0, 20.0);
@@ -160,9 +151,6 @@ async fn main() {
 
     }
 
-
-
-
     loop {
 
         //==== Process Input
@@ -185,26 +173,25 @@ async fn main() {
 
         //==== Handle Rendering
         clear_background(WHITE);
-        cam_zoom.y = -(screen_width() / screen_height())*0.001865;
-        set_camera(&level.camera);
-        level.camera.zoom = cam_zoom;
         /* Terrain */
         for tile in &level.tiles {
             match tile.t {
                 -1 => {}
-                0 => draw_spr(spr_grass, tile.x*TILE_SIZE as i32, tile.y*TILE_SIZE as i32, 4.0), //GRASS
-                1 => draw_spr(spr_dirt, tile.x*TILE_SIZE as i32, tile.y*TILE_SIZE as i32, 4.0), //DIRT
-                2 => draw_spr(spr_log, tile.x*TILE_SIZE as i32, tile.y*TILE_SIZE as i32, 4.0), //LOG
-                3 => draw_spr(spr_leaf, tile.x*TILE_SIZE as i32, tile.y*TILE_SIZE as i32, 4.0), //LEAF
-                4 => draw_spr(spr_water, tile.x*TILE_SIZE as i32, tile.y*TILE_SIZE as i32, 4.0), //WATER
+                0 => draw_spr(spr_grass, tile.x as f32 *TILE_SIZE , tile.y as f32 *TILE_SIZE , 4.0), //GRASS
+                1 => draw_spr(spr_dirt, tile.x as f32 *TILE_SIZE , tile.y as f32 *TILE_SIZE , 4.0), //DIRT
+                2 => draw_spr(spr_log, tile.x as f32 *TILE_SIZE , tile.y as f32 *TILE_SIZE , 4.0), //LOG
+                3 => draw_spr(spr_leaf, tile.x as f32 *TILE_SIZE , tile.y as f32 *TILE_SIZE , 4.0), //LEAF
+                4 => draw_spr(spr_water, tile.x as f32 *TILE_SIZE , tile.y as f32 *TILE_SIZE , 4.0), //WATER
                 //if we screw up, log it.
                 _ => println!("[Render] [Error] Encountered tile ID {}, which has no corresponding branch in the match statement.", tile.t),
             }
-            draw_text(&*format!("{}/{}/{}", tile.x, tile.y, tile.t), tile.x as f32 *TILE_SIZE*1.5, tile.y as f32*TILE_SIZE*1.5, 20.0, BLACK);
+            //draw_text(&*format!("{}/{}/{}", tile.x, tile.y, tile.t), tile.x as f32 *TILE_SIZE*1.5, tile.y as f32*TILE_SIZE*1.5, 20.0, BLACK);
+            //println!("{}/{}/{}", tile.x, tile.y, tile.t);
         }
+
         /* Entities */
         //player
-        draw_spr(spr_water, level.player.pos.x as i32, level.player.pos.x as i32, 10.0);
+        draw_spr(spr_player, level.player.pos.x, level.player.pos.y, 4.0);
         //world entities
         for entity in &level.entities{
             match entity.t{
@@ -214,7 +201,6 @@ async fn main() {
                 _ => println!("[Render] [Error] Encountered entity render ID {}, which has no corresponding branch in the match statement", entity.t)
             }
         }
-        set_default_camera();
         draw_text(&*format!("Px/Py: {} | FPS: {}", &level.player.pos, get_fps()), 10.0, 10.0, 20.0, BLACK);
         //some test mouse code!
 
@@ -232,7 +218,7 @@ async fn main() {
 }
 
 ///draws an image in the .spr.txt format to a specified set of cordinates, with a given pixel unit size
-fn draw_spr(spr_file: &str, draw_x: i32, draw_y: i32, pixel_size: f32) {
+fn draw_spr(spr_file: &str, draw_x: f32, draw_y: f32, pixel_size: f32) {
     let mut curr_x = 0;
     let mut curr_y = 0;
 
@@ -259,10 +245,10 @@ fn draw_spr(spr_file: &str, draw_x: i32, draw_y: i32, pixel_size: f32) {
 
             // draw_x/y are the cordinates of the image on the screen
             // curr x/y are the cordinates of this pixel, in that image, as we're iterating over the data.
-            let base_x = curr_x + draw_x;
-            let base_y = curr_y + draw_y;
+            let base_x = curr_x as f32 + draw_x;
+            let base_y = curr_y as f32 + draw_y;
             //draw a rectangle at the target cordinates with dimensions pixel_size,pixel_size
-            draw_rectangle(base_x as f32 * pixel_size, base_y as f32 * pixel_size, pixel_size, pixel_size, color);
+            draw_rectangle(base_x * pixel_size, base_y * pixel_size, pixel_size, pixel_size, color);
             curr_x += 1;
         }
         curr_x = 0;
