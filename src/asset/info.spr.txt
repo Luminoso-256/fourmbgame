@@ -1,0 +1,21 @@
+the .spr.txt format works as follows:
+each number represents a hardcoded color in the parser.
+
+0 - don't render this pixel
+1 - black
+2 - dark green
+3 - light green
+4 - dark blue
+5 - light blue
+6 - yellow
+7 - yellow-brown-issh
+8 - brown
+A - white
+B - gray
+C - dark brown
+D - unalloc
+E - unalloc
+F - unalloc
+
+rows of image are demarkated by |
+spaces demarkate pixels in row
